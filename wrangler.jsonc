@@ -1,0 +1,14 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "svelte-mail-test",
+	"account_id": "6886250e2aff0047919a1ed731a55c64",
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"send_email": [{ "name": "EMAIL" }],
+	"observability": { "enabled": true }
+}

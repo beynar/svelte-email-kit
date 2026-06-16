@@ -1,0 +1,7 @@
+{
+	"colors": "<html><head></head><body><a style=\"color:rgb(251, 44, 54);background-color:rgb(43, 127, 255);\">x</a></body></html>",
+	"opacity": "<html><head></head><body><a style=\"background-color:rgba(43, 127, 255, 0.5);color:rgba(0, 0, 0, 0.7);\">x</a></body></html>",
+	"spacing": "<html><head></head><body><a style=\"padding-left:20px;padding-right:20px;padding-top:12px;padding-bottom:12px;margin:16px;width:50%;border-radius:8px;border-radius:9999px;\">x</a></body></html>",
+	"variants": "<html><head><title>t</title><style>@media (hover: hover){.hover_underline:hover{text-decoration-line:underline}}.focus_bg-red-500:focus{background-color:rgb(251, 44, 54)}@media (min-width: 640px){.sm_text-lg{font-size:18px;line-height:1.5556}}</style></head><body><a class=\"sm_text-lg hover_underline focus_bg-red-500\">x</a></body></html>",
+	"preserveStyle": "<html><head></head><body><span style=\"color:rgb(251, 44, 54);font-weight:bold;\">x</span></body></html>"
+}
