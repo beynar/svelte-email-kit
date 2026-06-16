@@ -2,7 +2,7 @@
 
 **Build and send beautiful, email-client-safe HTML emails with Svelte 5 components.**
 
-Typed Svelte 5 components (table layouts, inline styles, Outlook MSO hacks), a `render()` pipeline that produces a complete inlined HTML document, and a **build-time Tailwind** plugin that bakes utility classes into inline styles — so nothing heavy ever runs when you send mail.
+Drop your email components in a dedicated folder; a **Vite plugin compiles them** — baking Tailwind utility classes into inline styles and generating a **typed, ready-to-send registry**. At send time it's just a plain function call returning `[html, text]` — no compiler, no Tailwind, nothing heavy.
 
 ![Svelte 5](https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white)
 ![Tailwind v4](<https://img.shields.io/badge/Tailwind-v4_(build--time)-38BDF8?logo=tailwindcss&logoColor=white>)
@@ -12,42 +12,55 @@ Typed Svelte 5 components (table layouts, inline styles, Outlook MSO hacks), a `
 
 ## ✨ Features
 
-- 🦋 **Svelte 5 native** — author emails as ordinary components with runes (`$props()`) and snippets. No React.
-- 🧩 **18 email components** — `Html`, `Head`, `Body`, `Container`, `Section`, `Row`, `Column`, `Text`, `Heading`, `Link`, `Button`, `Img`, `Hr`, `Preview`, `Font`, `Markdown`, `CodeInline`, `CodeBlock`.
-- 🪄 **`render()` → `[html, text]`** — a complete email (XHTML 1.0 Transitional doctype + full `<html>…</html>`, with Svelte's SSR hydration markers stripped while **Outlook MSO conditional comments are preserved**) plus a plain-text alternative, in one call.
-- 🅾️ **Outlook-ready out of the box** — the `Button` MSO padding hack, `Preview` invisible-Unicode inbox padding, and `Font` `@font-face` + fallback rule.
-- 🎨 **Typed CSS-in-JS** — `style={{ color: 'red' }}` checked via `csstype` (or a raw string), plus `m`/`mx`/`my`/… margin shorthands.
-- 📝 **Plain-text output** — the second element of `render()`'s tuple, produced via `html-to-text` (skips images and the hidden `<Preview>`).
-- 🌬️ **Build-time Tailwind v4** — the `svelte-email-kit/vite` plugin bakes utility classes into inline styles and hoists responsive/stateful rules into `<Head>`. **Zero Tailwind, PostCSS, or HTML parser at runtime.**
-- 🧬 **Email-safe value resolution** — `oklch()`→`rgb()`, opacity modifiers→`rgba()`, `calc()` and `rem`→`px`, logical→physical properties, `rounded-full`→`9999px`.
-- 🗂️ **Auto-generated typed registry** — `import { emails } from './emails'; await emails.welcome({ name })` with props inferred from each component.
+- 🌬️ **Build-time Vite plugin** — point it at a folder; every `.svelte` email in it is compiled, with Tailwind utility classes **baked into inline styles** (responsive/stateful rules hoisted into `<Head>`). Zero Tailwind / PostCSS / HTML-parser at runtime.
+- 🗂️ **Auto-generated typed registry** — the plugin writes `<dir>/index.ts` exporting `emails`, with props inferred per component: `const [html, text] = await emails.welcome({ name })`.
 - ♻️ **First-class dev mode** — edit a class and the preview hot-reloads; add/remove an email and the registry regenerates.
 - 🛡️ **Build-time safety** — a non-literal/composed class name fails the build, naming the file and `line:column`.
+- 🦋 **Svelte 5 native** — author emails as ordinary components with runes (`$props()`) and snippets. No React.
+- 🧩 **18 email components** — `Html`, `Head`, `Body`, `Container`, `Section`, `Row`, `Column`, `Text`, `Heading`, `Link`, `Button`, `Img`, `Hr`, `Preview`, `Font`, `Markdown`, `CodeInline`, `CodeBlock`.
+- 🪄 **`render()` → `[html, text]`** — a complete email (XHTML 1.0 Transitional doctype + full `<html>…</html>`, SSR hydration markers stripped, **Outlook MSO comments preserved**) plus a plain-text alternative, in one call.
+- 🅾️ **Outlook-ready** — `Button` MSO padding hack, `Preview` invisible-Unicode inbox padding, `Font` `@font-face` + fallback.
+- 🎨 **Typed CSS-in-JS** — `style={{ color: 'red' }}` checked via `csstype` (or a raw string), plus `m`/`mx`/`my`/… margin shorthands.
+- 🧬 **Email-safe value resolution** — `oklch()`→`rgb()`, opacity modifiers→`rgba()`, `calc()` and `rem`→`px`, logical→physical, `rounded-full`→`9999px`.
 - 📨 **Rich content** — GitHub-style `Markdown` and Prism-highlighted `CodeBlock` (ships the `xonokai` theme).
-- 🪶 **Lean runtime** — sending only needs `render()`; no compiler, no Tailwind, no PostCSS, no DOM parser.
 
 ---
 
-## Install
+## Getting started
+
+> The recommended way to use svelte-email-kit is the **Vite plugin**: it compiles a dedicated folder of email components and generates a typed registry you send from. (You _can_ call [`render()`](#rendercomponent-props-options) directly on any component without the plugin — but then Tailwind classes aren't baked and there's no generated registry.)
+
+### 1. Install
 
 ```sh
-pnpm add svelte-email-kit        # peer dependency: svelte@^5
+pnpm add svelte-email-kit            # peer dependency: svelte@^5
+pnpm add -D tailwindcss@^4 postcss   # build-time only — used by the plugin, never shipped
 ```
 
-`marked` (Markdown) and `prismjs` (CodeBlock) come bundled — nothing extra for those. Tailwind support is **build-time only**:
+`marked` (Markdown) and `prismjs` (CodeBlock) come bundled.
 
-```sh
-pnpm add -D tailwindcss@^4 postcss   # only if you use the Vite plugin
+### 2. Add the Vite plugin — **this is the critical step**
+
+```ts
+// vite.config.ts
+import { svelteMail } from 'svelte-email-kit/vite';
+import { sveltekit } from '@sveltejs/kit/vite';
+
+export default {
+	// `svelteMail` is `enforce: 'pre'`, so it bakes before vite-plugin-svelte
+	// regardless of array position.
+	plugins: [svelteMail({ dir: 'src/emails' }), sveltekit()]
+};
 ```
 
----
+`svelteMail({ dir?, index?, tailwind? })` — `dir` is the **dedicated email folder** (default `'src/emails'`), `index` overrides the generated registry path, and `tailwind.css` forwards Tailwind v4 CSS-first config (e.g. an `@theme { … }` block).
 
-## Quickstart
+### 3. Put your emails in that folder
 
-Write an email as an ordinary Svelte 5 component:
+Everything under `dir` is **auto-compiled**: the plugin rewrites each email's `.svelte` source before the Svelte compiler sees it, baking Tailwind classes into inline styles and hoisting responsive/stateful rules into `<Head>`.
 
 ```svelte
-<!-- src/emails/WelcomeEmail.svelte -->
+<!-- src/emails/welcome.svelte -->
 <script lang="ts">
 	import {
 		Html,
@@ -67,19 +80,14 @@ Write an email as an ordinary Svelte 5 component:
 <Html lang="en">
 	<Head />
 	<Preview children="Welcome to Acme — let's get you set up." />
-	<Body style={{ backgroundColor: '#f6f9fc', fontFamily: 'sans-serif' }}>
-		<Container style={{ backgroundColor: '#ffffff', padding: '32px' }}>
+	<Body class="bg-slate-100 font-sans">
+		<Container class="bg-white rounded-2xl p-8">
 			<Section>
-				<Heading as="h1">Welcome, {name}!</Heading>
-				<Text>Thanks for signing up. Click below to get started.</Text>
+				<Heading as="h1" class="text-2xl font-bold text-slate-900">Welcome, {name}!</Heading>
+				<Text class="text-slate-600">Thanks for signing up. Click below to get started.</Text>
 				<Button
 					href="https://example.com/start"
-					style={{
-						padding: '12px 20px',
-						backgroundColor: '#067df7',
-						color: '#fff',
-						borderRadius: '6px'
-					}}
+					class="bg-blue-600 text-white rounded-lg px-6 py-3 hover:bg-blue-700"
 				>
 					Get started
 				</Button>
@@ -89,31 +97,35 @@ Write an email as an ordinary Svelte 5 component:
 </Html>
 ```
 
-Render it:
+> Tailwind classes only bake when this email lives in the plugin's `dir`. Prefer inline `style={{ … }}`? That works anywhere, with or without the plugin.
+
+### 4. Send from the generated registry
+
+The plugin writes a typed `src/emails/index.ts` (regenerated on add/remove). Import it and call by name — props are type-checked per component, and you get back the `[html, text]` pair:
 
 ```ts
-import { render } from 'svelte-email-kit';
-import WelcomeEmail from './emails/WelcomeEmail.svelte';
+import { emails } from './emails'; // generated — add `/src/emails/index.ts` to .gitignore
 
-const [html, text] = await render(WelcomeEmail, { name: 'Ada' });
-// html → '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" …><html …>…</html>'
-// text → 'WELCOME, ADA!\n\n…'  (plain-text alternative)
+const [html, text] = await emails.welcome({ name: 'Ada' });
 ```
+
+Keys are camel-cased file names (`order-receipt.svelte` → `orderReceipt`). A wrong prop is a type error. See [Sending](#sending) for wiring `html`/`text` to a provider.
+
+---
 
 ## Sending
 
-`render()` returns an `[html, text]` pair — destructure it and hand both to any provider.
+`render()` (and each registry entry) returns an `[html, text]` pair — destructure and hand both to any provider.
 
 <details open>
 <summary><b>Resend</b></summary>
 
 ```ts
 import { Resend } from 'resend';
-import { render } from 'svelte-email-kit';
-import WelcomeEmail from './emails/WelcomeEmail.svelte';
+import { emails } from './emails';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const [html, text] = await render(WelcomeEmail, { name: 'Ada' });
+const [html, text] = await emails.welcome({ name: 'Ada' });
 await resend.emails.send({
 	from: 'Acme <hello@acme.com>',
 	to: 'ada@example.com',
@@ -132,11 +144,10 @@ Add a `send_email` binding to `wrangler.jsonc` (`{ "send_email": [{ "name": "EMA
 
 ```ts
 // a SvelteKit +server.ts on Cloudflare Workers
-import { render } from 'svelte-email-kit';
-import WelcomeEmail from '../emails/WelcomeEmail.svelte';
+import { emails } from '../emails';
 
 export const GET = async ({ platform }) => {
-	const [html, text] = await render(WelcomeEmail, { name: 'Ada' });
+	const [html, text] = await emails.welcome({ name: 'Ada' });
 	await platform.env.EMAIL.send({
 		to: 'ada@example.com',
 		from: { email: 'hello@yourdomain.com', name: 'Acme' },
@@ -155,15 +166,14 @@ export const GET = async ({ platform }) => {
 
 ```ts
 import nodemailer from 'nodemailer';
-import { render } from 'svelte-email-kit';
-import WelcomeEmail from './emails/WelcomeEmail.svelte';
+import { emails } from './emails';
 
 const transporter = nodemailer.createTransport({
 	host: 'smtp.example.com',
 	port: 587,
 	auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
 });
-const [html, text] = await render(WelcomeEmail, { name: 'Ada' });
+const [html, text] = await emails.welcome({ name: 'Ada' });
 await transporter.sendMail({
 	from: 'Acme <hello@acme.com>',
 	to: 'ada@example.com',
@@ -177,10 +187,14 @@ await transporter.sendMail({
 
 ## `render(component, props?, options?)`
 
-```ts
-type RenderResult = [html: string, text: string];
+The registry is sugar over `render()`. You can also import and call it directly on any component (handy outside a build, or for inline-style-only emails):
 
-render(component: Component, props?: Record<string, any>, options?: RenderOptions): Promise<RenderResult>
+```ts
+import { render } from 'svelte-email-kit';
+import Welcome from './emails/welcome.svelte';
+
+type RenderResult = [html: string, text: string];
+const [html, text] = await render(Welcome, { name: 'Ada' });
 ```
 
 Async (Svelte 5's server renderer is `PromiseLike`). Returns an `[html, text]` tuple:
@@ -189,6 +203,8 @@ Async (Svelte 5's server renderer is `PromiseLike`). Returns an `[html, text]` t
 - **`text`** — a plain-text alternative (via `html-to-text`) that skips `<img>` and the hidden `<Preview>` node.
 
 Destructure whichever parts you need: `const [html] = await render(…)` for HTML only, `const [, text] = await render(…)` for text only.
+
+> **Without the plugin, Tailwind classes are not baked.** Calling `render()` on a component that uses utility classes leaves them as inert `class` attributes. Use the plugin (compile the folder) or author with inline `style={{ … }}`.
 
 `RenderOptions`:
 
@@ -245,22 +261,9 @@ Every component accepts a typed `style` prop (a `CSSProperties` object, e.g. `st
 <CodeBlock code={`const x = 1;`} language="javascript" theme={xonokai} lineNumbers />
 ```
 
-## Build-time Tailwind (Vite plugin)
+## Tailwind details
 
-Tailwind is handled entirely at **build time** by `svelte-email-kit/vite`. It rewrites your email `.svelte` source before the Svelte compiler sees it, baking utility classes into inline styles (plus a `<Head>` `<style>` for responsive/stateful rules). The **runtime stays plain `render()`** — no Tailwind, PostCSS, or HTML parser loads when you send mail.
-
-```ts
-// vite.config.ts
-import { svelteMail } from 'svelte-email-kit/vite';
-import { sveltekit } from '@sveltejs/kit/vite';
-
-export default {
-	// `svelteMail` is `enforce: 'pre'`, so it bakes before vite-plugin-svelte.
-	plugins: [svelteMail({ dir: 'src/emails' }), sveltekit()]
-};
-```
-
-`svelteMail({ dir?, index?, tailwind? })` — `dir` is the email folder to bake (default `'src/emails'`), `index` overrides the generated registry path, and `tailwind.css` forwards Tailwind v4 CSS-first config (e.g. an `@theme { … }` block).
+The plugin resolves classes to **email-safe** values at build (`oklch()`→`rgb()`, opacity modifiers→`rgba()`, `calc()`/`rem`→`px`, logical→physical, `rounded-full`→`9999px`) and inlines them; responsive/stateful variants are hoisted into your `<Head>` `<style>`.
 
 ### Authoring rule
 
@@ -274,25 +277,10 @@ Class names must be **statically extractable** — static classes and **conditio
 <Text class="px-4 {compact ? 'py-1' : 'py-3'}" />
 <!-- ✅ template w/ literal branches -->
 <Text class={'bg-' + color} />
-<!-- ❌ composed → build error -->
+<!-- ❌ composed → build error (names the file + line:column) -->
 ```
 
-A composed/non-literal class name is a **build error** naming the file and the offending expression with a `line:column`. Variant classes (`sm:`, `hover:`, `focus:`, …) can't be inlined — they're kept as sanitized classes and their rules are injected into your `<Head>` `<style>`, so a variant-using email **must** include a `<Head>`.
-
-### Generated typed `emails` registry
-
-The plugin scans `dir` and writes a typed registry (default `<dir>/index.ts`):
-
-```ts
-import { emails } from './emails'; // generated — add to .gitignore
-const [html, text] = await emails.welcome({ name: 'Ada' }); // props typed from the component
-```
-
-Keys are camel-cased file names (`order-receipt.svelte` → `orderReceipt`), props are derived via `ComponentProps<typeof Component>` (a wrong prop is a type error), and each entry returns the same `Promise<[html, text]>` as `render()`.
-
-### Dev workflow & dependency budget
-
-In `vite dev` the bake runs on every save — editing a class **hot-reloads** updated inline styles and head rules with no restart; adding/removing an email regenerates the registry. `tailwindcss`/`postcss` are **build-time dev dependencies only**, never bundled into your runtime.
+Variant classes (`sm:`, `hover:`, `focus:`, …) can't be inlined — they're kept as sanitized classes and their rules are injected into your `<Head>` `<style>`, so a variant-using email **must** include a `<Head>`.
 
 > **Caveat — responsive overrides.** Because base utilities are inlined and inline styles beat `<style>` rules, a responsive/stateful variant that overrides an _already-inlined_ property (e.g. `text-2xl sm:text-3xl`) won't take effect unless the hoisted rule wins. The fix is `!important` on hoisted rules — on the roadmap. Variants on properties that aren't otherwise inlined work today.
 
