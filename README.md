@@ -1,4 +1,4 @@
-# svelte-mail
+# @beynar/svelte-email
 
 **Build and send beautiful, email-client-safe HTML emails with Svelte 5 components.**
 
