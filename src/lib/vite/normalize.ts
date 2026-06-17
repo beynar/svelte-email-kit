@@ -15,27 +15,13 @@ function isNode(value: unknown): value is AstNode {
 }
 
 /**
- * HTML void elements — they have no closing tag. When one of these is remapped to
- * a component (which Svelte requires be closed), the open tag must be self-closed
- * (`<hr>` → `<Hr/>`). Only `hr`/`img` are remappable today, but the full set keeps
- * the slash-injection correct if the remap table is extended.
+ * Void elements in the remap table — they have no closing tag, so when remapped
+ * to a component (which Svelte requires be closed) the open tag must be
+ * self-closed (`<hr>` → `<Hr/>`). Only `hr`/`img` qualify today; if you remap
+ * another void tag (`br`, `input`, …) via `forgiving.remap.tags`, add it here so
+ * its open tag self-closes too.
  */
-const VOID_TAGS = new Set([
-	'area',
-	'base',
-	'br',
-	'col',
-	'embed',
-	'hr',
-	'img',
-	'input',
-	'link',
-	'meta',
-	'param',
-	'source',
-	'track',
-	'wbr'
-]);
+const VOID_TAGS = new Set(['hr', 'img']);
 
 /**
  * The built-in native-tag → component remap table. `div`/`span` are intentionally

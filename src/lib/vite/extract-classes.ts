@@ -42,7 +42,7 @@ function isNode(value: unknown): value is AstNode {
 }
 
 /** Split a raw class string into non-empty, whitespace-trimmed tokens. */
-function tokenize(value: string): string[] {
+export function tokenize(value: string): string[] {
 	return value.split(/\s+/).filter((token) => token.length > 0);
 }
 
@@ -215,18 +215,6 @@ export function extractClasses(source: string, filename?: string): ExtractResult
 
 	walk(ast.fragment);
 
-	return { classes: dedupe(tokens), dynamic };
-}
-
-/** De-duplicate while preserving first-seen order. */
-function dedupe(items: string[]): string[] {
-	const seen = new Set<string>();
-	const out: string[] = [];
-	for (const item of items) {
-		if (!seen.has(item)) {
-			seen.add(item);
-			out.push(item);
-		}
-	}
-	return out;
+	// `Set` iteration preserves first-seen order, so this de-dupes stably.
+	return { classes: [...new Set(tokens)], dynamic };
 }

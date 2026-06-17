@@ -1,6 +1,7 @@
 import { parse } from 'svelte/compiler';
 import MagicString from 'magic-string';
 import type { TailwindMap } from '../internal/tailwind/generate-map.js';
+import { tokenize } from './extract-classes.js';
 
 /** A minimal structural view of the Svelte AST nodes we walk and edit. */
 interface AstNode {
@@ -12,11 +13,6 @@ interface AstNode {
 
 function isNode(value: unknown): value is AstNode {
 	return typeof value === 'object' && value !== null && typeof (value as AstNode).type === 'string';
-}
-
-/** Split a raw class string into non-empty, whitespace-trimmed tokens. */
-function tokenize(value: string): string[] {
-	return value.split(/\s+/).filter((token) => token.length > 0);
 }
 
 /**
@@ -484,11 +480,13 @@ export function bakeTailwind(source: string, map: TailwindMap, filename?: string
 	// Inject hoisted variant rules into the email's <Head>. We hoist the union of
 	// *all* `map.hoist` rules (deduped, stable order) — a variant class may live
 	// only inside a dynamic branch, which the static walk wouldn't observe.
-	const hoistRules = dedupeStable(
-		Object.keys(map.hoist)
-			.sort()
-			.map((k) => map.hoist[k])
-	);
+	const hoistRules = [
+		...new Set(
+			Object.keys(map.hoist)
+				.sort()
+				.map((k) => map.hoist[k])
+		)
+	];
 	if (hoistRules.length > 0) {
 		if (!headNode) {
 			throw new Error(
@@ -501,19 +499,6 @@ export function bakeTailwind(source: string, map: TailwindMap, filename?: string
 	}
 
 	return magicString.toString();
-}
-
-/** Dedupe an array of strings, preserving first-seen order. */
-function dedupeStable(items: string[]): string[] {
-	const seen = new Set<string>();
-	const out: string[] = [];
-	for (const item of items) {
-		if (!seen.has(item)) {
-			seen.add(item);
-			out.push(item);
-		}
-	}
-	return out;
 }
 
 /**

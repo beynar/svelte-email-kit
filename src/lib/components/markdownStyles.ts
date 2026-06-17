@@ -33,8 +33,6 @@ export type StylesType = {
 	strikethrough?: CSSProperties;
 };
 
-const emptyStyle: CSSProperties = {};
-
 const baseHeaderStyles = {
 	fontWeight: 500,
 	paddingTop: 20
@@ -82,7 +80,12 @@ const link = {
 	backgroundColor: 'transparent'
 } satisfies CSSProperties;
 
-/** react-email's default Markdown element styles. */
+/**
+ * react-email's default Markdown element styles. Elements with no default
+ * (`p`, `li`, lists, tables, `br`, `hr`, `strikethrough`, …) are simply absent —
+ * the `Markdown` renderer only emits a `style` attribute when one serializes
+ * non-empty, so an absent key behaves identically to an empty `{}`.
+ */
 export const styles: StylesType = {
 	h1,
 	h2,
@@ -95,19 +98,5 @@ export const styles: StylesType = {
 	italic,
 	link,
 	codeBlock: { ...codeBlock, wordWrap: 'break-word' },
-	codeInline: { ...codeInline, wordWrap: 'break-word' },
-	p: emptyStyle,
-	li: emptyStyle,
-	ul: emptyStyle,
-	ol: emptyStyle,
-	image: emptyStyle,
-	br: emptyStyle,
-	hr: emptyStyle,
-	table: emptyStyle,
-	thead: emptyStyle,
-	tbody: emptyStyle,
-	th: emptyStyle,
-	td: emptyStyle,
-	tr: emptyStyle,
-	strikethrough: emptyStyle
+	codeInline: { ...codeInline, wordWrap: 'break-word' }
 };

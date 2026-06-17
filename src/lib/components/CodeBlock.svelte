@@ -4,6 +4,7 @@
 	import type { Theme } from './themes.js';
 	import { parseCssInJsToInlineCss } from '../cssInJs.js';
 	import { mergeStyle } from '../style.js';
+	import { escapeHtml } from '../internal/html.js';
 	import type { CSSProperties, Style } from '../types.js';
 
 	interface Props extends Omit<HTMLAttributes<HTMLPreElement>, 'style'> {
@@ -30,11 +31,6 @@
 		}
 		return g;
 	});
-
-	/** HTML-escape token text content (`&`, `<`, `>`) so it is safe inside `{@html}`. */
-	function escapeHtml(value: string): string {
-		return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-	}
 
 	// NBSP + ZWJ + ZWSP (U+00A0 U+200D U+200B): keeps collapsed/leading spaces
 	// visible across email clients, matching react-email's `'\xA0\u200D\u200B'`.

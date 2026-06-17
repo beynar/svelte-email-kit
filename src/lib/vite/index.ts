@@ -7,6 +7,7 @@ import { generateIndex } from './generate-index.js';
 import { normalizeEmail, DEFAULT_REMAP_TABLE, type NormalizeOptions } from './normalize.js';
 import { detectTailwindConfig } from '../internal/tailwind/detect-config.js';
 import { startPreviewServer } from './preview-server.js';
+import { collectSvelteFiles } from './collect-emails.js';
 
 /** The default module specifier for the generated registry + injected imports. */
 const DEFAULT_IMPORT_SOURCE = 'svelte-email-kit';
@@ -31,32 +32,6 @@ function resolveForgiving(
 	const tags = typeof forgiving.remap === 'object' ? forgiving.remap.tags : undefined;
 	const remapTable = tags ? { ...DEFAULT_REMAP_TABLE, ...tags } : DEFAULT_REMAP_TABLE;
 	return { wrap, remap, remapTable, importSource };
-}
-
-/**
- * Recursively collect `.svelte` email paths under `dir`, relative to `baseDir`
- * (POSIX separators). Recurses into sub-folders (skipping `node_modules` and
- * dot-folders) so nested emails are discovered; the generated registry file is
- * `.ts`, so it is never picked up.
- */
-function collectEmailPaths(dir: string, baseDir: string): string[] {
-	const out: string[] = [];
-	let entries: fs.Dirent[];
-	try {
-		entries = fs.readdirSync(dir, { withFileTypes: true });
-	} catch {
-		return out;
-	}
-	for (const entry of entries) {
-		const abs = path.join(dir, entry.name);
-		if (entry.isDirectory()) {
-			if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
-			out.push(...collectEmailPaths(abs, baseDir));
-		} else if (entry.isFile() && entry.name.endsWith('.svelte')) {
-			out.push(path.relative(baseDir, abs).split(path.sep).join('/'));
-		}
-	}
-	return out;
 }
 
 /**
@@ -219,7 +194,7 @@ export function email(options: SvelteMailPluginOptions = {}): import('vite').Plu
 		// Collect every `.svelte` email under `dir`, recursing into sub-folders, as
 		// paths relative to `dir` (POSIX separators). Nesting is mirrored in the
 		// generated registry (`emails.auth.password.resetPassword`).
-		const paths = collectEmailPaths(resolvedDir, resolvedDir);
+		const paths = collectSvelteFiles(resolvedDir, resolvedDir);
 
 		const source = generateIndex(paths, { importSource });
 

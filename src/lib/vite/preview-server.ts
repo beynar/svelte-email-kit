@@ -1,8 +1,9 @@
 import http from 'node:http';
-import fs from 'node:fs';
 import path from 'node:path';
 import type { ViteDevServer } from 'vite';
 import { cleanSvelteMarkup } from '../render.js';
+import { collectSvelteFiles } from './collect-emails.js';
+import { escapeHtml } from '../internal/html.js';
 
 const DOCTYPE =
 	'<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" ' +
@@ -17,23 +18,9 @@ interface EmailEntry {
 }
 
 /** Recursively list the `.svelte` emails under `dir` as relative paths, sorted. */
-function listEmails(dir: string, baseDir: string = dir): EmailEntry[] {
-	if (!fs.existsSync(dir)) return [];
-	const out: EmailEntry[] = [];
-	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-		if (entry.isDirectory()) {
-			if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
-			out.push(...listEmails(path.join(dir, entry.name), baseDir));
-		} else if (entry.isFile() && entry.name.endsWith('.svelte')) {
-			const file = path.relative(baseDir, path.join(dir, entry.name)).split(path.sep).join('/');
-			out.push({ file, label: file.replace(/\.svelte$/, '') });
-		}
-	}
-	return out.sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : 0));
+function listEmails(dir: string): EmailEntry[] {
+	return collectSvelteFiles(dir).map((file) => ({ file, label: file.replace(/\.svelte$/, '') }));
 }
-
-const escapeHtml = (s: string) =>
-	s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /**
  * Start the svelte-email-kit email preview server.

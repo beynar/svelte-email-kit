@@ -2,6 +2,16 @@
 
 All notable changes to `svelte-email-kit` are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.3.0 — 2026-06-17
+
+### Changed
+
+- Internal cleanup only — **no public API or rendered-output changes**. Removed over-engineering surfaced by a repo audit:
+  - Replaced two hand-rolled order-preserving dedupe helpers with `[...new Set()]` (`Set` iteration is already insertion-ordered).
+  - Consolidated the duplicated recursive email-folder walker into one shared `collectSvelteFiles`, and the duplicated `tokenize` / `escapeHtml` helpers into single shared copies.
+  - Dropped 14 dead empty-style entries from the `Markdown` defaults (the renderer already omits empty styles, so behavior is identical).
+  - Trimmed the wrapper-injection void-tag set to the tags actually remappable (`hr`, `img`).
+
 ## 0.2.0 — 2026-06-17
 
 ### Changed
