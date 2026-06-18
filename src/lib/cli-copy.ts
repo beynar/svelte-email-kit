@@ -77,6 +77,35 @@ export function detectSetup(cwd: string): { installed: boolean; wired: boolean }
 }
 
 /**
+ * Detect the project's package manager from its lockfile, falling back to the
+ * package manager that invoked the CLI (`npm_config_user_agent`), then `npm`.
+ */
+export function detectPackageManager(
+	cwd: string,
+	userAgent: string = process.env.npm_config_user_agent ?? ''
+): 'pnpm' | 'yarn' | 'bun' | 'npm' {
+	if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return 'pnpm';
+	if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return 'yarn';
+	if (fs.existsSync(path.join(cwd, 'bun.lockb')) || fs.existsSync(path.join(cwd, 'bun.lock')))
+		return 'bun';
+	if (fs.existsSync(path.join(cwd, 'package-lock.json'))) return 'npm';
+	if (userAgent.startsWith('pnpm')) return 'pnpm';
+	if (userAgent.startsWith('yarn')) return 'yarn';
+	if (userAgent.startsWith('bun')) return 'bun';
+	return 'npm';
+}
+
+/** The dev-dependency install command for a package manager. */
+export function installCommand(
+	pm: string,
+	pkg = 'svelte-email-plugin'
+): { cmd: string; args: string[] } {
+	if (pm === 'npm') return { cmd: 'npm', args: ['install', '-D', pkg] };
+	if (pm === 'bun') return { cmd: 'bun', args: ['add', '-d', pkg] };
+	return { cmd: pm, args: ['add', '-D', pkg] }; // pnpm, yarn
+}
+
+/**
  * Copy the shared `_shared` kit plus the selected template categories from
  * `emailsDir` into `target`, rewriting imports. Returns the number of templates
  * (`.svelte` files outside `_shared`) copied.

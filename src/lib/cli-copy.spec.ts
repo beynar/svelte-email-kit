@@ -8,6 +8,8 @@ import {
 	copyTemplates,
 	categoryCount,
 	detectSetup,
+	detectPackageManager,
+	installCommand,
 	CATEGORIES
 } from './cli-copy.js';
 
@@ -62,5 +64,32 @@ describe('cli-copy', () => {
 		} finally {
 			fs.rmSync(tmp, { recursive: true, force: true });
 		}
+	});
+
+	it('detects the package manager from the lockfile, then user agent, then npm', () => {
+		const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sep-pm-'));
+		try {
+			expect(detectPackageManager(tmp, '')).toBe('npm'); // nothing → npm
+			expect(detectPackageManager(tmp, 'pnpm/9.0.0 npm/? node/v22')).toBe('pnpm'); // user agent
+			fs.writeFileSync(path.join(tmp, 'yarn.lock'), '');
+			expect(detectPackageManager(tmp, 'pnpm/9.0.0')).toBe('yarn'); // lockfile wins
+		} finally {
+			fs.rmSync(tmp, { recursive: true, force: true });
+		}
+	});
+
+	it('builds the right dev-install command per package manager', () => {
+		expect(installCommand('pnpm')).toEqual({
+			cmd: 'pnpm',
+			args: ['add', '-D', 'svelte-email-plugin']
+		});
+		expect(installCommand('npm')).toEqual({
+			cmd: 'npm',
+			args: ['install', '-D', 'svelte-email-plugin']
+		});
+		expect(installCommand('bun')).toEqual({
+			cmd: 'bun',
+			args: ['add', '-d', 'svelte-email-plugin']
+		});
 	});
 });

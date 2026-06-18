@@ -2,6 +2,12 @@
 
 All notable changes to `svelte-email-plugin` are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.5.1 — 2026-06-18
+
+### Added
+
+- The `npx svelte-email-plugin` CLI now offers to **install the package for you** when it's missing — it detects your package manager (pnpm/yarn/bun/npm from the lockfile, else the invoking one) and runs the dev-dependency install, then drops that step from the printed next-steps.
+
 ## 0.5.0 — 2026-06-18
 
 ### Added

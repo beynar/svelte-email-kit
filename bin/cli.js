@@ -1,9 +1,17 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as p from '@clack/prompts';
-import { CATEGORIES, categoryCount, copyTemplates, detectSetup } from '../dist/cli-copy.js';
+import {
+	CATEGORIES,
+	categoryCount,
+	copyTemplates,
+	detectSetup,
+	detectPackageManager,
+	installCommand
+} from '../dist/cli-copy.js';
 
 // The bundled templates ship under `<pkg>/src/emails` (see package.json `files`).
 const EMAILS_DIR = path.resolve(
@@ -12,6 +20,24 @@ const EMAILS_DIR = path.resolve(
 	'src',
 	'emails'
 );
+
+/** Run a command in the user's project, resolving on exit 0, rejecting otherwise. */
+function run(cmd, args) {
+	return new Promise((resolve, reject) => {
+		const child = spawn(cmd, args, {
+			cwd: process.cwd(),
+			stdio: 'pipe',
+			shell: process.platform === 'win32'
+		});
+		let out = '';
+		child.stdout.on('data', (d) => (out += d));
+		child.stderr.on('data', (d) => (out += d));
+		child.on('error', reject);
+		child.on('close', (code) =>
+			code === 0 ? resolve(out) : reject(new Error(out || `exited ${code}`))
+		);
+	});
+}
 
 async function main() {
 	p.intro('svelte-email-plugin — copy email templates');
@@ -47,12 +73,33 @@ async function main() {
 	const n = copyTemplates({ emailsDir: EMAILS_DIR, target: dest, categories });
 	s.stop(`Copied ${n} templates + the shared kit into ${target}/`);
 
-	// Only surface the setup steps the project still needs.
-	const { installed, wired } = detectSetup(process.cwd());
+	// Offer to install the package if it's missing, then surface only remaining setup.
+	let { installed, wired } = detectSetup(process.cwd());
+	const pm = detectPackageManager(process.cwd());
+	if (!installed) {
+		const yes = await p.confirm({
+			message: `svelte-email-plugin isn't installed here. Install it now with ${pm}?`
+		});
+		if (p.isCancel(yes)) return p.cancel('Cancelled.');
+		if (yes) {
+			const { cmd, args } = installCommand(pm);
+			const sp = p.spinner();
+			sp.start(`Installing svelte-email-plugin (${pm})`);
+			try {
+				await run(cmd, args);
+				installed = true;
+				sp.stop('Installed svelte-email-plugin');
+			} catch {
+				sp.stop(`Couldn't install automatically — run \`${cmd} ${args.join(' ')}\` yourself.`);
+			}
+		}
+	}
+
 	const steps = [];
 	let i = 1;
 	if (!installed) {
-		steps.push(`${i++}. Install it:`, '     pnpm add -D svelte-email-plugin', '');
+		const { cmd, args } = installCommand(pm);
+		steps.push(`${i++}. Install it:`, `     ${cmd} ${args.join(' ')}`, '');
 	}
 	if (!wired) {
 		steps.push(
