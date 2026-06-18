@@ -6,7 +6,7 @@ All notable changes to `svelte-email-plugin` are documented here. This project a
 
 ### Changed
 
-- **Renamed to `svelte-email-plugin`** (was `svelte-plugin-mail`). Update install + imports: `svelte-email-plugin`, `svelte-email-plugin/vite`, `svelte-email-plugin/render`. The GitHub repo stays `beynar/svelte-plugin-mail`.
+- **Renamed to `svelte-email-plugin`** (was `svelte-plugin-mail`); the GitHub repo was renamed to match (`beynar/svelte-email-plugin`). Update install + imports: `svelte-email-plugin`, `svelte-email-plugin/vite`, `svelte-email-plugin/render`.
 - **`postcss` is now a bundled dependency** (was an optional peer), so Tailwind baking needs no extra install. `tailwindcss@^4` remains an optional peer (you already have it if you author Tailwind classes).
 
 ## 0.3.1 — 2026-06-17
