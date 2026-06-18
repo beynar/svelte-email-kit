@@ -1,9 +1,15 @@
 @import 'tailwindcss';
 
-/* Custom theme tokens. The svelte-email-kit Vite plugin auto-detects this
+/* Custom theme tokens. The svelte-email-plugin Vite plugin auto-detects this
    `@theme` block, so emails can use `text-brand` / `bg-brand` and have them
    baked to these exact values — no per-plugin Tailwind config. */
 @theme {
 	--color-brand: #6d28d9;
 	--color-brand-foreground: #f5f3ff;
+	--color-brand-dark: #5b21b6;
+	--color-ink: #1a1a2e;
+	--color-muted: #6b7280;
+	--color-line: #ececf0;
+	--color-success: #16a34a;
+	--color-danger: #dc2626;
 }

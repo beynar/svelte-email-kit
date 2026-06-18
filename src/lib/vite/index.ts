@@ -290,12 +290,20 @@ export function email(options: SvelteMailPluginOptions = {}): import('vite').Plu
 			const inside = relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
 			if (!inside) return;
 
+			// Files under a `_`-prefixed folder (e.g. `_shared/`) are shared partials —
+			// header/footer/button fragments, not whole emails. They still get their
+			// Tailwind baked, but forgiveness must NOT wrap them in Html/Head/Body. Only
+			// folder segments mark this (the filename is dropped), so a `_`-named email
+			// file at the top level is still treated as a normal, forgiven email.
+			const dirSegments = relative.split(/[\\/]/).slice(0, -1);
+			const isShared = dirSegments.some((seg) => seg.startsWith('_'));
+
 			// Forgiveness pass: remap native tags → components and inject missing
 			// Html/Head/Body (+ the imports they need) before anything else sees the
 			// source. The Tailwind bake then runs on this normalized string.
 			let source = code;
 			let normalized = false;
-			if (forgivenessEnabled) {
+			if (forgivenessEnabled && !isShared) {
 				const result = normalizeEmail(code, filename, forgive);
 				source = result.code;
 				normalized = result.changed;

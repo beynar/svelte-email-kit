@@ -2,6 +2,22 @@
 
 All notable changes to `svelte-email-plugin` are documented here. This project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.5.0 — 2026-06-18
+
+### Added
+
+- **Template gallery** — ~30 production-ready templates across `auth`, `orders`, `billing`, `marketing`, and `notifications`, styled with stock Tailwind (a neutral black-and-white palette), each rendering to `[html, text]`. They share a small kit in `_shared/` — `Layout` (Preview + branded Container + Header/Footer), `Btn`, `LineItems`, and a configurable `brand` (Acme default).
+- **`npx svelte-email-plugin`** — an interactive CLI to copy the templates into your project: pick the email types, choose a folder, and it copies the selected categories + the shared kit, rewriting imports to `svelte-email-plugin`. It detects whether the package is already installed / the Vite plugin already wired and prints only the setup steps you still need.
+- **`/emails` gallery route** in the playground — a dynamic route that walks the generated registry to preview every template in an isolated iframe.
+
+### Fixed
+
+- **`Button` corrupted baked string styles** — it inspected `style` with `Object.entries`/spread assuming an object, but the Vite plugin bakes a component's Tailwind `class` into a string `style`, so it enumerated the string character-by-character (`style="0:d;1:i;…"`). Added `parseStyleString`; every baked `<Button>` (e.g. the Tailwind demo) is fixed.
+
+### Changed
+
+- The plugin now **excludes `_`-prefixed folders** (e.g. `_shared/`) from the generated registry and the preview server, and **skips the forgiveness pass** for them — so shared partials aren't treated as sendable emails or wrapped in `<Html>`/`<Head>`/`<Body>`.
+
 ## 0.4.1 — 2026-06-18
 
 Re-published via CI trusted publishing (npm OIDC + provenance), and corrects the `repository` URL metadata to `beynar/svelte-email-plugin`. No code changes from `0.4.0`.

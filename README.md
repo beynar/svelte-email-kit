@@ -1,6 +1,6 @@
 # svelte-email-plugin
 
-Build and send email-client-safe HTML emails with Svelte 5 components. A Vite plugin compiles a folder of `.svelte` emails — baking Tailwind classes to inline styles and generating a typed registry — so sending is one call returning `[html, text]`.
+Build and send email-client-safe HTML emails with Svelte 5 components. A Vite plugin compiles a folder of `.svelte` emails — baking Tailwind classes to inline styles and codegenning a typed API — so sending is one call returning `[html, text]`.
 
 ![Svelte 5](https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white)
 ![Tailwind v4](<https://img.shields.io/badge/Tailwind-v4_(build--time)-38BDF8?logo=tailwindcss&logoColor=white>)
@@ -11,7 +11,7 @@ Build and send email-client-safe HTML emails with Svelte 5 components. A Vite pl
 ## Features
 
 - **Build-time Vite plugin** — point it at a folder; Tailwind classes bake to inline styles, variants hoist into `<Head>`. No Tailwind/PostCSS/HTML-parser at runtime.
-- **Typed registry** — the plugin writes `<dir>/index.ts`; `const [html, text] = await emails.welcome({ name })`, props inferred per component, sub-folders mirrored as nested objects.
+- **Generated typed API** — the plugin codegens `<dir>/index.ts`: a typed `emails` object with one method per template, each component's props inferred. `const [html, text] = await emails.welcome({ name })`.
 - **Forgiving authoring** — write plain HTML (`<section>`, `<p>`, `<a>`, `<h1>`…); native tags are remapped to components and `<Html>`/`<Head>`/`<Body>` + imports are injected.
 - **18 components** — Html, Head, Body, Container, Section, Row, Column, Text, Heading, Link, Button, Img, Hr, Preview, Font, Markdown, CodeInline, CodeBlock.
 - **Outlook-ready** — Button MSO padding hack, Preview inbox padding, Font `@font-face` + fallback.
@@ -25,8 +25,6 @@ Build and send email-client-safe HTML emails with Svelte 5 components. A Vite pl
 ```sh
 pnpm add svelte-email-plugin   # peer: svelte@^5
 ```
-
-`marked` (Markdown), `prismjs` (CodeBlock), and `postcss` (Tailwind baking) are bundled. Baking Tailwind classes also uses your project's `tailwindcss@^4` (an optional peer — you already have it).
 
 ## Setup
 
@@ -80,16 +78,7 @@ Everything under `dir` is compiled. Use the components:
 </Html>
 ```
 
-Or write plain HTML and let [forgiveness](#forgiveness) wrap it and remap the tags:
-
-```svelte
-<!-- src/emails/welcome.svelte — no wrappers, no imports -->
-<section class="bg-slate-100 p-6">
-	<h1 class="text-2xl font-bold">Welcome, Ada!</h1>
-	<p class="text-slate-600">Thanks for signing up.</p>
-	<a href="https://example.com/start" class="text-blue-600">Get started</a>
-</section>
-```
+Or skip the wrappers and imports — write plain HTML and let [forgiveness](#forgiveness) inject them and remap native tags.
 
 Tailwind classes only bake inside the plugin's `dir`. Elsewhere, use inline `style={{ … }}`.
 
@@ -114,32 +103,7 @@ src/emails/
       └─ reset-password.svelte    → emails.auth.password.resetPassword(props)
 ```
 
-Each call returns `[html, text]` — hand them to any provider:
-
-<details open>
-<summary><b>Resend</b></summary>
-
-```ts
-import { Resend } from 'resend';
-import { emails } from './emails';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const [html, text] = await emails.welcome({ name: 'Ada' });
-await resend.emails.send({
-	from: 'Acme <hello@acme.com>',
-	to: 'ada@example.com',
-	subject: 'Welcome',
-	html,
-	text
-});
-```
-
-</details>
-
-<details>
-<summary><b>Cloudflare Workers (Email Sending binding)</b></summary>
-
-`wrangler.jsonc`: `{ "send_email": [{ "name": "EMAIL" }] }`, with a domain onboarded via `wrangler email sending enable yourdomain.com`.
+Each call returns `[html, text]` — hand them to any provider (Resend, Nodemailer/SMTP, Postmark…). Example with the Cloudflare Workers Email Sending binding (`wrangler.jsonc`: `{ "send_email": [{ "name": "EMAIL" }] }`, domain onboarded via `wrangler email sending enable yourdomain.com`):
 
 ```ts
 // SvelteKit +server.ts on Cloudflare Workers
@@ -158,31 +122,28 @@ export const GET = async ({ platform }) => {
 };
 ```
 
-</details>
+## Templates
 
-<details>
-<summary><b>Nodemailer / SMTP</b></summary>
+~30 ready-to-copy templates, all Tailwind-styled, brand-configurable (an `Acme` default), and
+rendering to `[html, text]`:
 
-```ts
-import nodemailer from 'nodemailer';
-import { emails } from './emails';
+- **auth** — welcome, verify-email, magic-link, otp, reset-password, password-changed, new-sign-in, team-invite
+- **orders** — confirmation, shipped, delivered, cancelled, refunded, return-started, return-complete
+- **billing** — receipt, payment-failed, trial-started, trial-ending, renewed, cancelled, card-expiring
+- **marketing** — announcement, promo, newsletter, winback, event-invite, feedback
+- **notifications** — mention, digest
 
-const transporter = nodemailer.createTransport({
-	host: 'smtp.example.com',
-	port: 587,
-	auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-});
-const [html, text] = await emails.welcome({ name: 'Ada' });
-await transporter.sendMail({
-	from: 'Acme <hello@acme.com>',
-	to: 'ada@example.com',
-	subject: 'Welcome',
-	html,
-	text
-});
+Copy the ones you want into your project — pick the categories, choose a folder:
+
+```sh
+npx svelte-email-plugin
 ```
 
-</details>
+It copies the selected categories plus the shared kit (header, footer, button, line-items, `Layout`)
+into your folder and rewrites imports to `svelte-email-plugin`. The templates use **stock Tailwind**
+(neutral black-and-white palette) — no theme config to add. Each wraps its body in
+`<Layout preview="…">` and is reachable through the generated registry —
+`emails.auth.welcome({ name })`, `emails.orders.confirmation({ … })`, etc.
 
 ## Forgiveness
 
@@ -278,11 +239,6 @@ Class names must be statically extractable — static or conditional-literal:
 ```
 
 Variant classes need a `<Head>` to hoist into (forgiveness injects one). Hoisted rules are emitted `!important` so a variant reliably overrides the base utility it was inlined from (e.g. `text-2xl sm:text-3xl` resizes as expected).
-
-## Svelte 5 notes
-
-- Components use `$props()` and `{@render children?.()}` — no slots.
-- `render()` strips `svelte/server` hydration markers (`<!--[-->`, `<!---->`, `onload="this.__e=event"`, …) while preserving Outlook MSO comments. It returns a `Promise` and awaits Svelte's `PromiseLike` server output, so async components work.
 
 ## License
 

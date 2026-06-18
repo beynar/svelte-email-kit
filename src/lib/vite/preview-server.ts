@@ -132,15 +132,72 @@ function errorFrame(file: string, e: unknown): string {
 <pre style="white-space:pre-wrap;color:#fda4af;margin-top:12px">${escapeHtml(message)}</pre></body>`;
 }
 
-/** The preview shell: sidebar list + iframe + viewport toggle + SSE auto-reload. */
-function indexPage(emails: EmailEntry[]): string {
-	const first = emails[0]?.file ?? '';
-	const items = emails
+/** A folder in the sidebar tree. */
+interface TreeDir {
+	dirs: Map<string, TreeDir>;
+	files: { file: string; name: string }[];
+}
+
+const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+const baseName = (file: string) =>
+	file
+		.split('/')
+		.pop()!
+		.replace(/\.svelte$/, '');
+
+/** Group flat relative paths (`auth/magic-link.svelte`) into a folder tree. */
+function buildTree(emails: EmailEntry[]): TreeDir {
+	const root: TreeDir = { dirs: new Map(), files: [] };
+	for (const { file } of emails) {
+		const parts = file.split('/');
+		const name = baseName(parts.pop()!);
+		let node = root;
+		for (const seg of parts) {
+			let next = node.dirs.get(seg);
+			if (!next) node.dirs.set(seg, (next = { dirs: new Map(), files: [] }));
+			node = next;
+		}
+		node.files.push({ file, name });
+	}
+	return root;
+}
+
+/** First file in render order (files before sub-folders) — the default selection. */
+function firstFile(node: TreeDir): string | undefined {
+	const file = [...node.files].sort((a, b) => cmp(a.name, b.name))[0]?.file;
+	if (file) return file;
+	for (const [, child] of [...node.dirs].sort((a, b) => cmp(a[0], b[0]))) {
+		const found = firstFile(child);
+		if (found) return found;
+	}
+	return undefined;
+}
+
+/** Render the tree: file buttons then sub-folder headers, indented by depth. */
+function renderTree(node: TreeDir, depth: number): string {
+	const pad = 10 + depth * 14;
+	const files = [...node.files]
+		.sort((a, b) => cmp(a.name, b.name))
 		.map(
-			(e) =>
-				`<button class="item" data-file="${escapeHtml(e.file)}">${escapeHtml(e.label)}</button>`
+			(f) =>
+				`<button class="item" data-file="${escapeHtml(f.file)}" style="padding-left:${pad}px">${escapeHtml(f.name)}</button>`
 		)
 		.join('');
+	const dirs = [...node.dirs]
+		.sort((a, b) => cmp(a[0], b[0]))
+		.map(
+			([name, child]) =>
+				`<div class="dir" style="padding-left:${pad}px">${escapeHtml(name)}</div>${renderTree(child, depth + 1)}`
+		)
+		.join('');
+	return files + dirs;
+}
+
+/** The preview shell: sidebar tree + iframe + viewport toggle + SSE auto-reload. */
+function indexPage(emails: EmailEntry[]): string {
+	const tree = buildTree(emails);
+	const first = firstFile(tree) ?? '';
+	const items = renderTree(tree, 0);
 	const empty = emails.length === 0;
 
 	return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>svelte-email-plugin preview</title>
@@ -154,6 +211,7 @@ function indexPage(emails: EmailEntry[]): string {
   .item { display: block; width: 100%; text-align: left; background: transparent; border: 0; color: #c7c7cf; padding: 8px 10px; border-radius: 8px; cursor: pointer; font: inherit; }
   .item:hover { background: #1a1a1d; color: #fff; }
   .item[aria-current="true"] { background: #2563eb; color: #fff; }
+  .dir { padding: 8px 10px 2px; color: #6b6b73; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
   main { display: flex; flex-direction: column; min-width: 0; }
   header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #232327; }
   header .name { font-weight: 600; color: #fff; }
@@ -172,7 +230,7 @@ function indexPage(emails: EmailEntry[]): string {
   </aside>
   <main>
     <header>
-      <span class="name" id="name">${escapeHtml(emails[0]?.label ?? '')}</span>
+      <span class="name" id="name">${escapeHtml(first ? baseName(first) : '')}</span>
       <span class="spacer"></span>
       <div class="seg">
         <button data-w="full" aria-pressed="true">Desktop</button>

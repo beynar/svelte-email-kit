@@ -1,6 +1,6 @@
 {
 	"name": "svelte-email-plugin",
-	"version": "0.4.1",
+	"version": "0.5.0",
 	"packageManager": "pnpm@10.32.1",
 	"description": "A Svelte 5 port of react-email — build and render email-safe HTML emails with Svelte components.",
 	"license": "MIT",
@@ -27,10 +27,20 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run"
 	},
+	"bin": {
+		"svelte-email-plugin": "bin/cli.js"
+	},
 	"files": [
 		"dist",
-		"!dist/**/*.test.*",
-		"!dist/**/*.spec.*"
+		"bin",
+		"src/emails/_shared",
+		"src/emails/auth",
+		"src/emails/billing",
+		"src/emails/marketing",
+		"src/emails/notifications",
+		"src/emails/orders",
+		"!**/*.test.*",
+		"!**/*.spec.*"
 	],
 	"sideEffects": [
 		"**/*.css"
@@ -97,6 +107,7 @@
 		"svelte-email"
 	],
 	"dependencies": {
+		"@clack/prompts": "^1.5.1",
 		"csstype": "^3.2.3",
 		"html-to-text": "^10.0.0",
 		"magic-string": "^0.30.21",

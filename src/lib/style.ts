@@ -167,6 +167,29 @@ export function mergeStyle(...inputs: Array<Style | undefined>): string {
 }
 
 /**
+ * Parse an inline-style string (`"padding-left:24px;color:#fff"`) into a typed
+ * CSS object with camelCase keys (`{ paddingLeft: '24px', color: '#fff' }`).
+ *
+ * The inverse of {@link styleToString}, for components that need to inspect
+ * individual declarations (e.g. `Button`'s padding → MSO hack) but may receive a
+ * baked **string** style from the Vite plugin instead of an object. Declarations
+ * without a `:` are skipped; values keep their original text.
+ */
+export function parseStyleString(style: string): CSSProperties {
+	const out: Record<string, string> = {};
+	for (const decl of style.split(';')) {
+		const idx = decl.indexOf(':');
+		if (idx === -1) continue;
+		const prop = decl.slice(0, idx).trim();
+		const value = decl.slice(idx + 1).trim();
+		if (!prop || !value) continue;
+		const camel = prop.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+		out[camel] = value;
+	}
+	return out as CSSProperties;
+}
+
+/**
  * Split a merged `<Body>` inline-style string for react-email's Yahoo/AOL fix
  * (issue #662): those clients convert `<body>` to a `<div>` and drop its styles,
  * so the full style lives on an inner `<td>` (`cell`) while the `<body>` keeps

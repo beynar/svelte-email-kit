@@ -3,6 +3,11 @@
 
 	const examples = [
 		{
+			href: resolve('/emails/[...slug]', { slug: '' }),
+			title: 'Template gallery →',
+			desc: '~30 ready-to-copy templates (auth, orders, billing, marketing, notifications).'
+		},
+		{
 			href: resolve('/(examples)/welcome'),
 			title: 'Welcome',
 			desc: 'Onboarding email with a hero image and CTA button.'

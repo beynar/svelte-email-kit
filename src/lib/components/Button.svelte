@@ -1,19 +1,24 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLAnchorAttributes } from 'svelte/elements';
-	import { convertToPx, parsePadding, pxToPt, styleToString } from '../style.js';
+	import { convertToPx, parsePadding, parseStyleString, pxToPt, styleToString } from '../style.js';
 	import type { CSSProperties } from '../types.js';
 
 	// `href`/`target` flow through `...rest`, so the props extend the anchor
 	// attribute set (a superset of HTMLAttributes<HTMLAnchorElement>) that carries
 	// them; the `style` object overrides the string-typed inherited `style`.
 	interface Props extends Omit<HTMLAnchorAttributes, 'style'> {
-		style?: CSSProperties;
+		style?: CSSProperties | string;
 		target?: string;
 		children?: Snippet;
 	}
 
 	let { style = {}, target = '_blank', children, ...rest }: Props = $props();
+
+	// `style` may arrive as a baked inline-style **string** from the Vite plugin
+	// (it bakes a component's Tailwind `class` into a string `style`). Normalize to
+	// an object so the padding inspection + spread below work either way.
+	const styleObj = $derived(typeof style === 'string' ? parseStyleString(style) : style);
 
 	/**
 	 * react-email's MSO padding hack. The hidden `<i>` spans Outlook renders use
@@ -40,7 +45,7 @@
 		let right = 0;
 		let bottom = 0;
 		let left = 0;
-		for (const [key, value] of Object.entries(style)) {
+		for (const [key, value] of Object.entries(styleObj)) {
 			if (value === undefined || value === null) continue;
 			const v = value as string | number;
 			if (key === 'padding') {
@@ -76,7 +81,7 @@
 			display: 'inline-block',
 			maxWidth: '100%',
 			msoPaddingAlt: '0px',
-			...style,
+			...styleObj,
 			paddingTop: `${pt}px`,
 			paddingRight: `${pr}px`,
 			paddingBottom: `${pb}px`,
